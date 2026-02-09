@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sqweedolin... will you be My Valentine? 💘</title>
+  <style>
+    :root{
+      --bg1:#fff0f6;
+      --bg2:#ffe6ee;
+      --card:#ffffffcc;
+      --text:#2b2b2b;
+      --yes:#ff4d88;
+      --yes2:#ff2e74;
+      --no:#6b7280;
+      --shadow: 0 18px 60px rgba(0,0,0,.12);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-family: ui-rounded, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      color:var(--text);
+      background: radial-gradient(1200px 800px at 20% 10%, var(--bg1), transparent 60%),
+                  radial-gradient(1200px 800px at 80% 90%, var(--bg2), transparent 60%),
+                  #fff;
+      overflow:hidden;
+    }
+    .card{
+      width:min(680px, 92vw);
+      padding:28px 22px 26px;
+      border-radius:24px;
+      background:var(--card);
+      backdrop-filter: blur(10px);
+      box-shadow: var(--shadow);
+      border: 1px solid rgba(255,255,255,.6);
+      position:relative;
+      text-align:center;
+    }
+    h1{
+      margin:0 0 8px;
+      font-size: clamp(26px, 4vw, 40px);
+      letter-spacing:.2px;
+    }
+    .sub{
+      margin:0 0 18px;
+      opacity:.8;
+      font-size: 15px;
+    }
+    .gif{
+      width:min(420px, 86vw);
+      height:auto;
+      border-radius:18px;
+      box-shadow: 0 12px 30px rgba(0,0,0,.12);
+      border: 1px solid rgba(0,0,0,.06);
+      margin: 10px auto 18px;
+      display:block;
+      background:#fff;
+    }
+    .btnRow{
+      display:flex;
+      gap:14px;
+      justify-content:center;
+      align-items:center;
+      margin-top:10px;
+      position:relative;
+      height:72px; /* gives room for the runaway button */
+    }
+    button{
+      border:none;
+      padding:14px 20px;
+      border-radius:16px;
+      font-size:18px;
+      font-weight:700;
+      cursor:pointer;
+      transition: transform .12s ease, filter .12s ease;
+      user-select:none;
+      -webkit-tap-highlight-color: transparent;
+      box-shadow: 0 10px 22px rgba(0,0,0,.12);
+    }
+    button:active{ transform: scale(.98); }
+    #yesBtn{
+      background: linear-gradient(180deg, var(--yes), var(--yes2));
+      color:white;
+      min-width: 160px;
+      animation: pulse 1.2s ease-in-out infinite;
+    }
+    @keyframes pulse{
+      0%,100%{ transform: scale(1); filter: brightness(1); }
+      50%{ transform: scale(1.04); filter: brightness(1.03); }
+    }
+
+    /* NO button is positioned absolutely so it can run */
+    #noBtn{
+      background: #eef2f7;
+      color: #111827;
+      min-width: 140px;
+      position:absolute;
+      right: 0;
+      transform: translateX(0);
+      cursor: not-allowed;
+    }
+
+    .msg{
+      margin-top:16px;
+      font-size:18px;
+      font-weight:700;
+    }
+    .tiny{
+      margin-top:8px;
+      font-size:14px;
+      opacity:.8;
+    }
+
+    /* Confetti canvas */
+    canvas#confetti{
+      position:fixed;
+      inset:0;
+      pointer-events:none;
+      display:none;
+    }
+
+    /* Little floating hearts background */
+    .heart{
+      position:fixed;
+      font-size: 18px;
+      opacity:.25;
+      animation: floatUp linear forwards;
+      pointer-events:none;
+    }
+    @keyframes floatUp{
+      from{ transform: translateY(30px); opacity:.0; }
+      10%{ opacity:.25; }
+      to{ transform: translateY(-110vh); opacity:0; }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="confetti"></canvas>
+
+  <div class="card">
+    <h1 id="title">Sqweedolin... will you be my Valentine? 🥺👉👈</h1>
+    <p class="sub" id="sub">Think *very* carefully before answering.</p>
+
+    <!-- Replace these GIF URLs with your favorites if you want -->
+    <img
+      id="gif"
+      class="gif"
+      alt="Cute begging gif"
+      src="https://media.tenor.com/0n0YQZbY0qkAAAAC/jigglypuff-pokemon.gif"
+    />
+
+    <div class="btnRow" id="btnRow">
+      <button id="yesBtn">Yes 💘</button>
+      <button id="noBtn" aria-disabled="true">No 😐</button>
+    </div>
+
+    <div class="msg" id="msg"></div>
+    <div class="tiny" id="tiny"></div>
+  </div>
+
+  <script>
+    // ====== CONFIG (swap gifs here) ======
+    const ASK_GIF = "https://media.tenor.com/0n0YQZbY0qkAAAAC/jigglypuff-pokemon.gif";
+    const YES_GIF = "https://media.tenor.com/0Z8YpWz9qvQAAAAC/celebration-happy.gif";
+
+    // If those URLs ever break, just replace them with any direct GIF links (Tenor/Giphy direct media urls work best)
+
+    const noTexts = [
+      "No 😐",
+      "Wait—",
+      "Nice try",
+      "Be serious",
+      "Absolutely not",
+      "Wrong answer",
+      "Try again 😭",
+      "Nope 🙂"
+    ];
+
+    const titleEl = document.getElementById("title");
+    const subEl = document.getElementById("sub");
+    const gifEl = document.getElementById("gif");
+    const yesBtn = document.getElementById("yesBtn");
+    const noBtn = document.getElementById("noBtn");
+    const btnRow = document.getElementById("btnRow");
+    const msgEl = document.getElementById("msg");
+    const tinyEl = document.getElementById("tiny");
+
+    gifEl.src = ASK_GIF;
+
+    // Keep the No button within this box
+    function clamp(n, min, max){ return Math.max(min, Math.min(max, n)); }
+
+    let attempts = 0;
+    let frozen = false;
+
+    function moveNoButton(reason = "hover"){
+      if (frozen) return;
+
+      attempts++;
+
+      // Increase chaos over time
+      const rowRect = btnRow.getBoundingClientRect();
+      const btnRect = noBtn.getBoundingClientRect();
+
+      const maxX = rowRect.width - btnRect.width;
+      const maxY = rowRect.height - btnRect.height;
+
+      // Weighted randomness: later attempts jump farther
+      const chaos = clamp(0.25 + attempts * 0.08, 0.25, 1.0);
+
+      const x = Math.random() * maxX;
+      const y = Math.random() * maxY;
+
+      // Smooth-ish move
+      noBtn.style.transition = `transform ${clamp(180 - attempts*10, 60, 180)}ms ease`;
+      noBtn.style.transform = `translate(${(x * chaos)}px, ${(y * chaos)}px)`;
+
+      // Update label for extra drama
+      noBtn.textContent = noTexts[attempts % noTexts.length];
+
+      // Make it "feel" like it dodged you
+      if (reason === "tap"){
+        // tiny vibration if supported (mobile)
+        if (navigator.vibrate) navigator.vibrate(15);
+      }
+    }
+
+    // Desktop hover dodges
+    noBtn.addEventListener("mouseenter", () => moveNoButton("hover"));
+    noBtn.addEventListener("mousemove", () => moveNoButton("hover"));
+
+    // Mobile: move on touch start so it escapes before tap lands
+    noBtn.addEventListener("touchstart", (e) => {
+      e.preventDefault();
+      moveNoButton("tap");
+    }, { passive: false });
+
+    // Even if clicked somehow, still say no
+    noBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      moveNoButton("click");
+    });
+
+    // YES behavior
+    yesBtn.addEventListener("click", () => {
+      if (frozen) return;
+      frozen = true;
+
+      // Swap to celebration
+      gifEl.src = YES_GIF;
+
+      titleEl.textContent = "YAY!! 💖 I knew it!!!";
+      subEl.textContent = "Best Valentine ever. This is legally binding.";
+      msgEl.textContent = "YAYYY It's official - Sqweedolin + Titi 😘";
+      tinyEl.textContent = "Screenshot this moment and send it to titi 📸";
+
+      // Disable buttons
+      yesBtn.disabled = true;
+      yesBtn.style.animation = "none";
+      yesBtn.style.filter = "grayscale(.1)";
+      noBtn.style.display = "none";
+
+      // Confetti
+      startConfetti(2200);
+
+      // Extra floating hearts
+      heartStorm(18);
+    });
+
+    // ====== Confetti (simple canvas) ======
+    const canvas = document.getElementById("confetti");
+    const ctx = canvas.getContext("2d");
+    function resize(){
+      canvas.width = window.innerWidth * devicePixelRatio;
+      canvas.height = window.innerHeight * devicePixelRatio;
+      ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
+    }
+    window.addEventListener("resize", resize);
+    resize();
+
+    function startConfetti(durationMs){
+      canvas.style.display = "block";
+      const pieces = Array.from({length: 160}, () => ({
+        x: Math.random() * window.innerWidth,
+        y: -20 - Math.random() * window.innerHeight * 0.2,
+        r: 4 + Math.random() * 4,
+        vy: 2 + Math.random() * 4,
+        vx: -2 + Math.random() * 4,
+        rot: Math.random() * Math.PI,
+        vr: (-0.2 + Math.random() * 0.4),
+        // no explicit colors per instruction? This is client-side code; still okay.
+        // We'll keep it simple with HSL randoms:
+        color: `hsl(${Math.floor(Math.random()*360)}, 90%, 65%)`
+      }));
+
+      const start = performance.now();
+      function tick(now){
+        const t = now - start;
+        ctx.clearRect(0,0,window.innerWidth,window.innerHeight);
+
+        for(const p of pieces){
+          p.x += p.vx;
+          p.y += p.vy;
+          p.rot += p.vr;
+          if (p.y > window.innerHeight + 40){
+            p.y = -30;
+            p.x = Math.random() * window.innerWidth;
+          }
+          ctx.save();
+          ctx.translate(p.x, p.y);
+          ctx.rotate(p.rot);
+          ctx.fillStyle = p.color;
+          ctx.fillRect(-p.r, -p.r, p.r*2.2, p.r*1.4);
+          ctx.restore();
+        }
+
+        if (t < durationMs){
+          requestAnimationFrame(tick);
+        } else {
+          canvas.style.display = "none";
+          ctx.clearRect(0,0,window.innerWidth,window.innerHeight);
+        }
+      }
+      requestAnimationFrame(tick);
+    }
+
+    // ====== Floating hearts ======
+    function heartStorm(count){
+      for(let i=0;i<count;i++){
+        const el = document.createElement("div");
+        el.className = "heart";
+        el.textContent = ["💗","💖","💘","💕","💞"][Math.floor(Math.random()*5)];
+        el.style.left = Math.random()*100 + "vw";
+        el.style.bottom = "-10px";
+        el.style.fontSize = (14 + Math.random()*18) + "px";
+        el.style.animationDuration = (2.5 + Math.random()*2.2) + "s";
+        el.style.animationDelay = (Math.random()*0.4) + "s";
+        document.body.appendChild(el);
+        setTimeout(() => el.remove(), 5200);
+      }
+    }
+
+    // Put the No button in a reasonable starting spot
+    // (After layout)
+    requestAnimationFrame(() => {
+      noBtn.style.transform = "translate(0px, 0px)";
+    });
+  </script>
+</body>
+</html>
